@@ -227,6 +227,12 @@ def main():
 
     args = parser.parse_args()
 
+    # Validate category name is not empty
+    if args.category is not None and not args.category.strip():
+        error = {"status": "error", "error": "Category name cannot be empty."}
+        print(json.dumps(error, indent=2))
+        sys.exit(1)
+
     if args.list:
         result = list_categories(limit=args.limit, prefix=args.prefix)
     else:

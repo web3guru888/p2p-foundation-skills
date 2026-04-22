@@ -6,10 +6,11 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![GitHub Issues](https://img.shields.io/github/issues/web3guru888/p2p-foundation-skills.svg)](https://github.com/web3guru888/p2p-foundation-skills/issues)
 [![No API Key](https://img.shields.io/badge/API%20Key-not%20needed-brightgreen.svg)](#-quick-start)
+[![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen.svg)](#-testing)
 
 Give your AI coding agent (Claude Code, Codex, Copilot, Cursor, Gemini CLI) the ability to search, read, browse, and explore the **P2P Foundation Wiki** — the world's largest knowledge base on peer-to-peer, commons, and decentralized topics. Each skill is a self-contained Python script plus a `SKILL.md` that any AI coding agent can read and act on immediately.
 
-> **No API key required!** The P2P Foundation Wiki is fully public. Just clone and go.
+> **No API key required!** The P2P Foundation Wiki is fully public.
 
 ---
 
@@ -39,36 +40,109 @@ Topics span blockchain governance, platform cooperativism, digital commons, gift
 
 ## ⚡ Quick Start
 
-### 1. Clone this repo
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/web3guru888/p2p-foundation-skills.git
 cd p2p-foundation-skills
-pip install requests   # only dependency
+pip install -r requirements.txt
 ```
 
-**No API key needed!** The P2P Foundation Wiki is public.
+Or install dependencies directly:
+
+```bash
+pip install cloudscraper requests
+```
+
+> **Note:** The P2P Foundation Wiki is protected by **Cloudflare**. The scripts use
+> [`cloudscraper`](https://github.com/VeNoMouS/cloudscraper) to handle this transparently.
+> If `cloudscraper` is not installed, the scripts fall back to plain `requests` (which
+> may receive `403 Forbidden` responses from Cloudflare). Always install `cloudscraper`
+> for reliable operation.
 
 ### 2. Run a skill
 
 ```bash
 # Search for articles on commons-based peer production
-python3 skills/p2p-wiki-search/scripts/search_wiki.py --query "commons-based peer production" --limit 5
+python3 skills/p2p-wiki-search/scripts/search_wiki.py \
+    --query "commons-based peer production" --limit 5
 
 # Read a full article
-python3 skills/p2p-wiki-read/scripts/read_article.py --title "Michel Bauwens"
+python3 skills/p2p-wiki-read/scripts/read_article.py \
+    --title "Michel Bauwens"
 
-# Browse categories
-python3 skills/p2p-wiki-categories/scripts/browse_categories.py --category "Peer Production"
+# Browse category members
+python3 skills/p2p-wiki-categories/scripts/browse_categories.py \
+    --category "Peerproduction"
 
 # Get random articles for discovery
 python3 skills/p2p-wiki-explore/scripts/explore_wiki.py --random 5
 
-# Wiki statistics
+# Wiki-wide statistics
 python3 skills/p2p-wiki-explore/scripts/explore_wiki.py --stats
 ```
 
-All scripts output JSON to stdout. Errors go to stderr. Exit code 0 on success, 1 on failure.
+All scripts output **JSON to stdout**. Errors go to **stderr**. Exit code `0` on success, `1` on failure.
+
+---
+
+## 📋 JSON Output Examples
+
+### `p2p-wiki-search --query "commons" --limit 2`
+
+```json
+{
+  "status": "success",
+  "query": "commons",
+  "total": 8081,
+  "returned": 2,
+  "offset": 0,
+  "results": [
+    {
+      "title": "Commons",
+      "page_id": 1234,
+      "snippet": "The commons is the cultural and natural resources accessible to all members of a society...",
+      "word_count": 1200,
+      "size_bytes": 18400,
+      "timestamp": "2026-03-15T10:22:00Z",
+      "url": "https://wiki.p2pfoundation.net/Commons"
+    },
+    {
+      "title": "Digital Commons",
+      "page_id": 5678,
+      "snippet": "Digital commons are information and knowledge resources that are collectively created...",
+      "word_count": 850,
+      "size_bytes": 12300,
+      "timestamp": "2026-02-10T08:44:00Z",
+      "url": "https://wiki.p2pfoundation.net/Digital_Commons"
+    }
+  ]
+}
+```
+
+### `p2p-wiki-explore --stats`
+
+```json
+{
+  "status": "success",
+  "mode": "statistics",
+  "site": {
+    "name": "P2P Foundation Wiki",
+    "base_url": "https://wiki.p2pfoundation.net/Main_Page",
+    "generator": "MediaWiki 1.40.4",
+    "language": "en"
+  },
+  "statistics": {
+    "pages": 45074,
+    "articles": 25473,
+    "edits": 150137,
+    "images": 1200,
+    "users": 981,
+    "active_users": 4,
+    "admins": 18
+  }
+}
+```
 
 ---
 
@@ -82,9 +156,11 @@ These skills follow the [SKILL.md specification](https://github.com/anthropics/s
 You: "What does the P2P Foundation say about platform cooperativism?"
 
 Agent reads: skills/p2p-wiki-search/SKILL.md
-Agent runs:  python3 skills/p2p-wiki-search/scripts/search_wiki.py --query "platform cooperativism" --limit 5
-Agent reads: skills/p2p-wiki-read/SKILL.md  
-Agent runs:  python3 skills/p2p-wiki-read/scripts/read_article.py --title "Platform Cooperativism"
+Agent runs:  python3 skills/p2p-wiki-search/scripts/search_wiki.py \
+                 --query "platform cooperativism" --limit 5
+Agent reads: skills/p2p-wiki-read/SKILL.md
+Agent runs:  python3 skills/p2p-wiki-read/scripts/read_article.py \
+                 --title "Platform Cooperativism"
 Agent:       "According to the P2P Foundation Wiki, platform cooperativism is..."
 ```
 
@@ -110,6 +186,7 @@ All skills use the **MediaWiki API** — the same API that powers Wikipedia. The
 Base URL: https://wiki.p2pfoundation.net/api.php
 Auth:     None required (public wiki)
 Format:   JSON
+Note:     Cloudflare-protected — use cloudscraper for reliable access
 ```
 
 ### API Endpoints Used
@@ -127,6 +204,40 @@ Format:   JSON
 
 ---
 
+## 🧪 Testing
+
+### Run unit tests
+
+```bash
+pip install -r requirements.txt
+python3 -m pytest tests/ -v
+```
+
+The test suite includes **13 tests**:
+
+- **CLI tests** — verify `--help`, required arguments, and invalid input handling for all 4 skills
+- **Mock-based structure tests** — verify JSON output keys and values using mocked API responses (no network required)
+
+```
+tests/test_unit.py::TestSearchWiki::test_help                           PASSED
+tests/test_unit.py::TestSearchWiki::test_missing_query                  PASSED
+tests/test_unit.py::TestReadArticle::test_help                          PASSED
+tests/test_unit.py::TestReadArticle::test_missing_title                 PASSED
+tests/test_unit.py::TestBrowseCategories::test_help                     PASSED
+tests/test_unit.py::TestBrowseCategories::test_missing_action           PASSED
+tests/test_unit.py::TestBrowseCategories::test_empty_category_rejected  PASSED
+tests/test_unit.py::TestExploreWiki::test_help                          PASSED
+tests/test_unit.py::TestExploreWiki::test_missing_action                PASSED
+tests/test_unit.py::TestSearchWikiOutputStructure::test_output_structure        PASSED
+tests/test_unit.py::TestReadArticleOutputStructure::test_output_structure       PASSED
+tests/test_unit.py::TestBrowseCategoriesOutputStructure::test_output_structure  PASSED
+tests/test_unit.py::TestExploreWikiStatsStructure::test_stats_structure         PASSED
+
+13 passed in ~3s
+```
+
+---
+
 ## 📁 Repo Structure
 
 ```
@@ -135,6 +246,7 @@ p2p-foundation-skills/
 ├── AGENTS.md                           # Instructions for AI agents
 ├── CONTRIBUTING.md                     # How to contribute
 ├── LICENSE                             # Apache 2.0
+├── requirements.txt                    # Python dependencies
 ├── skills/
 │   ├── p2p-wiki-search/
 │   │   ├── SKILL.md                    # Skill definition
@@ -157,9 +269,30 @@ p2p-foundation-skills/
 ├── docs/
 │   └── mediawiki-api.md                # MediaWiki API reference
 └── tests/
-    ├── test_unit.py                    # Unit tests
+    ├── test_unit.py                    # Unit + mock-based tests (13 tests)
     └── README.md                       # Test instructions
 ```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Adding a new skill
+
+Each skill follows the [SKILL.md specification](https://github.com/anthropics/skill-md-spec):
+
+1. Create a directory: `skills/p2p-wiki-<name>/`
+2. Add `SKILL.md` with valid YAML frontmatter (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`)
+3. Add your Python script under `scripts/` — it must:
+   - Output JSON to **stdout** only
+   - Send logs/diagnostics to **stderr**
+   - Exit `0` on success, `1` on error
+   - Use `cloudscraper` (with `requests` fallback) for HTTP calls
+   - Support `--help`
+4. Add tests to `tests/test_unit.py`
+5. Verify: `python3 -m pytest tests/ -v`
 
 ---
 
@@ -170,6 +303,7 @@ p2p-foundation-skills/
 - **P2P Foundation Blog**: https://blog.p2pfoundation.net/
 - **MediaWiki API Docs**: https://www.mediawiki.org/wiki/API:Main_page
 - **SKILL.md Specification**: https://github.com/anthropics/skill-md-spec
+- **cloudscraper**: https://github.com/VeNoMouS/cloudscraper
 
 ---
 

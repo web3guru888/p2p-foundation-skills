@@ -298,6 +298,12 @@ def main():
 
     args = parser.parse_args()
 
+    # Validate title is not empty
+    if not args.title or not args.title.strip():
+        error = {"status": "error", "error": "Title cannot be empty.", "code": "emptytitle"}
+        print(json.dumps(error, indent=2))
+        sys.exit(1)
+
     if args.sections:
         result = list_sections(args.title)
     elif args.format == "wikitext":

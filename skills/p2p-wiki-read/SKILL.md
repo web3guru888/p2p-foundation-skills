@@ -11,7 +11,7 @@ metadata:
   version: "1.0.0"
   author: "web3guru888"
   last-updated: "2026-04-22"
-allowed-tools: Read Bash(python3 *) Bash(pip install requests)
+allowed-tools: Read Bash(python3 *) Bash(pip install cloudscraper requests) Bash(pip install -r requirements.txt)
 ---
 
 # P2P Wiki Read
