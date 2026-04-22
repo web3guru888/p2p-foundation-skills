@@ -26,7 +26,9 @@ Usage:
     python3 search_wiki.py --query "Michel Bauwens" --offset 10
 
 Requirements:
-    - requests library (pip install requests)
+    - cloudscraper (preferred) or requests library
+      pip install cloudscraper   # handles Cloudflare-protected wiki
+      pip install requests       # fallback (may get 403 if Cloudflare is active)
     - No API key needed — the P2P Foundation Wiki is public
 
 Output:
@@ -35,23 +37,32 @@ Output:
 
 import argparse
 import json
+import re
 import sys
 
+# Prefer cloudscraper (handles Cloudflare); fall back to plain requests.
 try:
-    import requests
+    import cloudscraper
+    _SESSION = cloudscraper.create_scraper()
 except ImportError:
-    print(
-        json.dumps({
-            "status": "error",
-            "error": "requests library not installed. Run: pip install requests"
-        }),
-        file=sys.stdout,
-    )
-    sys.exit(1)
+    try:
+        import requests
+        _SESSION = requests.Session()
+    except ImportError:
+        print(
+            json.dumps({
+                "status": "error",
+                "error": (
+                    "Neither cloudscraper nor requests is installed. "
+                    "Run: pip install cloudscraper"
+                ),
+            }),
+            file=sys.stdout,
+        )
+        sys.exit(1)
 
 
 API_URL = "https://wiki.p2pfoundation.net/api.php"
-USER_AGENT = "P2PFoundationSkills/1.0 (https://github.com/web3guru888/p2p-foundation-skills)"
 
 
 def log(msg):
@@ -87,9 +98,9 @@ def search_wiki(query, limit=10, offset=0):
     log("Searching for: {} (limit={}, offset={})".format(query, limit, offset))
 
     try:
-        resp = requests.get(API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=30)
+        resp = _SESSION.get(API_URL, params=params, timeout=30)
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         return {"status": "error", "error": "API request failed: {}".format(str(e))}
 
     data = resp.json()
@@ -104,8 +115,6 @@ def search_wiki(query, limit=10, offset=0):
     for item in search_results:
         # Strip HTML tags from snippet
         snippet = item.get("snippet", "")
-        # Simple HTML tag removal
-        import re
         snippet = re.sub(r"<[^>]+>", "", snippet)
 
         results.append({

@@ -26,7 +26,9 @@ Usage:
     python3 read_article.py --title "Blockchain" --sections
 
 Requirements:
-    - requests library (pip install requests)
+    - cloudscraper (preferred) or requests library
+      pip install cloudscraper   # handles Cloudflare-protected wiki
+      pip install requests       # fallback (may get 403 if Cloudflare is active)
     - No API key needed — the P2P Foundation Wiki is public
 
 Output:
@@ -38,21 +40,29 @@ import json
 import re
 import sys
 
+# Prefer cloudscraper (handles Cloudflare); fall back to plain requests.
 try:
-    import requests
+    import cloudscraper
+    _SESSION = cloudscraper.create_scraper()
 except ImportError:
-    print(
-        json.dumps({
-            "status": "error",
-            "error": "requests library not installed. Run: pip install requests"
-        }),
-        file=sys.stdout,
-    )
-    sys.exit(1)
+    try:
+        import requests
+        _SESSION = requests.Session()
+    except ImportError:
+        print(
+            json.dumps({
+                "status": "error",
+                "error": (
+                    "Neither cloudscraper nor requests is installed. "
+                    "Run: pip install cloudscraper"
+                ),
+            }),
+            file=sys.stdout,
+        )
+        sys.exit(1)
 
 
 API_URL = "https://wiki.p2pfoundation.net/api.php"
-USER_AGENT = "P2PFoundationSkills/1.0 (https://github.com/web3guru888/p2p-foundation-skills)"
 
 
 def log(msg):
@@ -104,9 +114,9 @@ def read_article_parsed(title):
     log("Fetching parsed article: {}".format(title))
 
     try:
-        resp = requests.get(API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=30)
+        resp = _SESSION.get(API_URL, params=params, timeout=30)
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         return {"status": "error", "error": "API request failed: {}".format(str(e))}
 
     data = resp.json()
@@ -128,9 +138,12 @@ def read_article_parsed(title):
         for s in parse.get("sections", [])
     ]
 
+    # Strip HTML from displaytitle (MediaWiki wraps it in <span> tags)
+    display_title = re.sub(r"<[^>]+>", "", parse.get("displaytitle", title)).strip()
+
     return {
         "status": "success",
-        "title": parse.get("displaytitle", title),
+        "title": display_title,
         "page_id": parse.get("pageid", 0),
         "format": "text",
         "content": plain_text,
@@ -163,9 +176,9 @@ def read_article_wikitext(title):
     log("Fetching wikitext for: {}".format(title))
 
     try:
-        resp = requests.get(API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=30)
+        resp = _SESSION.get(API_URL, params=params, timeout=30)
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         return {"status": "error", "error": "API request failed: {}".format(str(e))}
 
     data = resp.json()
@@ -233,9 +246,9 @@ def list_sections(title):
     log("Listing sections for: {}".format(title))
 
     try:
-        resp = requests.get(API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=30)
+        resp = _SESSION.get(API_URL, params=params, timeout=30)
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         return {"status": "error", "error": "API request failed: {}".format(str(e))}
 
     data = resp.json()
@@ -249,9 +262,12 @@ def list_sections(title):
         for s in parse.get("sections", [])
     ]
 
+    # Strip HTML from displaytitle (MediaWiki wraps it in <span> tags)
+    display_title = re.sub(r"<[^>]+>", "", parse.get("displaytitle", title)).strip()
+
     return {
         "status": "success",
-        "title": parse.get("displaytitle", title),
+        "title": display_title,
         "page_id": parse.get("pageid", 0),
         "section_count": len(sections),
         "sections": sections,

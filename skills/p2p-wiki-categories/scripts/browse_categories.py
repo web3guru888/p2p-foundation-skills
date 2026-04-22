@@ -27,7 +27,9 @@ Usage:
     python3 browse_categories.py --category "Commons" --type subcat
 
 Requirements:
-    - requests library (pip install requests)
+    - cloudscraper (preferred) or requests library
+      pip install cloudscraper   # handles Cloudflare-protected wiki
+      pip install requests       # fallback (may get 403 if Cloudflare is active)
     - No API key needed — the P2P Foundation Wiki is public
 
 Output:
@@ -38,21 +40,29 @@ import argparse
 import json
 import sys
 
+# Prefer cloudscraper (handles Cloudflare); fall back to plain requests.
 try:
-    import requests
+    import cloudscraper
+    _SESSION = cloudscraper.create_scraper()
 except ImportError:
-    print(
-        json.dumps({
-            "status": "error",
-            "error": "requests library not installed. Run: pip install requests"
-        }),
-        file=sys.stdout,
-    )
-    sys.exit(1)
+    try:
+        import requests
+        _SESSION = requests.Session()
+    except ImportError:
+        print(
+            json.dumps({
+                "status": "error",
+                "error": (
+                    "Neither cloudscraper nor requests is installed. "
+                    "Run: pip install cloudscraper"
+                ),
+            }),
+            file=sys.stdout,
+        )
+        sys.exit(1)
 
 
 API_URL = "https://wiki.p2pfoundation.net/api.php"
-USER_AGENT = "P2PFoundationSkills/1.0 (https://github.com/web3guru888/p2p-foundation-skills)"
 
 
 def log(msg):
@@ -86,9 +96,9 @@ def list_categories(limit=50, prefix=None):
     log("Listing categories (limit={}, prefix={})".format(limit, prefix))
 
     try:
-        resp = requests.get(API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=30)
+        resp = _SESSION.get(API_URL, params=params, timeout=30)
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         return {"status": "error", "error": "API request failed: {}".format(str(e))}
 
     data = resp.json()
@@ -149,9 +159,9 @@ def get_category_members(category, limit=50, member_type="page"):
     log("Getting members of {} (type={}, limit={})".format(cat_title, member_type, limit))
 
     try:
-        resp = requests.get(API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=30)
+        resp = _SESSION.get(API_URL, params=params, timeout=30)
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         return {"status": "error", "error": "API request failed: {}".format(str(e))}
 
     data = resp.json()
